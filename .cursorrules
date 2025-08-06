@@ -1,0 +1,194 @@
+# OpenFeature PHP AWS AppConfig Provider - Cursor Rules
+
+## Project Overview
+This project implements an OpenFeature provider for PHP that uses AWS AppConfig as the backend configuration store. The provider follows the OpenFeature specification and integrates with AWS AppConfig for feature flag management.
+
+## Code Style and Standards
+
+### PHP Standards
+- Follow PSR-12 coding standards
+- Use PHP 8.1+ features where appropriate
+- Use strict typing (`declare(strict_types=1);`)
+- Use proper namespacing following PSR-4
+- Prefer composition over inheritance
+- Use dependency injection where appropriate
+
+### File Organization
+- Use PSR-4 autoloading structure
+- Place source code in `src/` directory
+- Place tests in `tests/` directory
+- Use descriptive class and method names
+- Group related functionality in appropriate namespaces
+
+### Documentation
+- Use PHPDoc comments for all public methods and classes
+- Include `@param`, `@return`, and `@throws` annotations
+- Document complex business logic with inline comments
+- Keep README.md updated with usage examples
+
+## OpenFeature Integration
+
+### Provider Implementation
+- Implement `OpenFeature\Providers\Provider` interface
+- Follow OpenFeature specification for method signatures
+- Handle evaluation context properly
+- Implement proper error handling and fallbacks
+- Support all OpenFeature evaluation types (boolean, string, number, object)
+
+### AWS AppConfig Integration
+- Use AWS SDK for PHP v3
+- Implement proper AWS credentials handling
+- Support AppConfig application, environment, and configuration profile
+- Handle AppConfig polling and caching appropriately
+- Implement proper error handling for AWS API calls
+
+## Testing Standards
+
+### Test Structure
+- Use PHPUnit for testing
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies (AWS SDK)
+- Test both success and failure scenarios
+- Maintain high test coverage (>90%)
+
+### Test Naming
+- Use descriptive test method names
+- Group related tests in test classes
+- Use `@test` annotation or prefix with `test`
+- Test edge cases and error conditions
+
+## Error Handling
+
+### Exception Handling
+- Use custom exception classes for different error types
+- Provide meaningful error messages
+- Log errors appropriately
+- Implement proper fallback mechanisms
+- Handle AWS API errors gracefully
+
+### Logging
+- Use PSR-3 Logger interface
+- Log important operations and errors
+- Include relevant context in log messages
+- Use appropriate log levels
+
+## Performance Considerations
+
+### Caching
+- Implement appropriate caching for AppConfig values
+- Use TTL-based caching
+- Handle cache invalidation properly
+- Consider memory usage for large configurations
+
+### AWS API Calls
+- Minimize API calls through caching
+- Implement exponential backoff for retries
+- Use connection pooling where appropriate
+- Monitor API usage and costs
+
+## Security
+
+### AWS Credentials
+- Support multiple credential providers
+- Never hardcode credentials
+- Use IAM roles when possible
+- Implement proper credential rotation
+
+### Configuration Security
+- Validate configuration values
+- Sanitize user inputs
+- Use secure defaults
+- Implement proper access controls
+
+## Dependencies
+
+### Required Dependencies
+- `openfeature/openfeature-php`: Core OpenFeature library
+- `aws/aws-sdk-php`: AWS SDK for AppConfig integration
+- `psr/log`: PSR-3 logging interface
+- `psr/cache`: PSR-6 caching interface
+
+### Development Dependencies
+- `phpunit/phpunit`: Testing framework
+- `phpstan/phpstan`: Static analysis
+- `squizlabs/php_codesniffer`: Code style checking
+- `php-coveralls/php-coveralls`: Coverage reporting
+
+## Code Quality
+
+### Static Analysis
+- Use PHPStan for static analysis
+- Configure appropriate analysis level
+- Address all reported issues
+- Use type hints consistently
+
+### Code Style
+- Use PHP_CodeSniffer with PSR-12 rules
+- Run style checks before commits
+- Use consistent formatting
+- Follow naming conventions
+
+## Git Workflow
+
+### Commit Messages
+- Use conventional commit format
+- Include issue numbers when applicable
+- Write descriptive commit messages
+- Keep commits focused and atomic
+
+### Branch Strategy
+- Use feature branches for new development
+- Create pull requests for code review
+- Maintain clean git history
+- Use semantic versioning for releases
+
+## Documentation
+
+### README
+- Include installation instructions
+- Provide usage examples
+- Document configuration options
+- Include troubleshooting guide
+
+### API Documentation
+- Document all public methods
+- Include parameter descriptions
+- Provide return value documentation
+- Include usage examples
+
+## Environment Setup
+
+### Development Environment
+- Use Docker for consistent development
+- Include docker-compose for local development
+- Provide clear setup instructions
+- Include environment variable examples
+
+### CI/CD
+- Set up automated testing
+- Include code quality checks
+- Implement automated deployment
+- Monitor build status
+
+## Best Practices
+
+### General
+- Write self-documenting code
+- Keep methods small and focused
+- Use meaningful variable names
+- Avoid code duplication
+- Implement proper error handling
+
+### OpenFeature Specific
+- Follow OpenFeature specification strictly
+- Implement proper context handling
+- Support all evaluation types
+- Provide meaningful default values
+- Handle evaluation errors gracefully
+
+### AWS Specific
+- Follow AWS best practices
+- Implement proper retry logic
+- Use appropriate AWS regions
+- Monitor AWS costs
+- Implement proper security measures
