@@ -101,7 +101,7 @@ class FeatureFlagEvaluator
         string $flagKey,
         array $configuration,
         EvaluationContext $context,
-        array $defaultValue
+        mixed $defaultValue
     ): array {
         $flag = $this->getFlag($flagKey, $configuration);
 

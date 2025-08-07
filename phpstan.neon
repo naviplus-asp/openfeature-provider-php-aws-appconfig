@@ -5,5 +5,5 @@ parameters:
         - tests
     excludePaths:
         - tests
-    checkMissingIterableValueType: false
-    checkGenericClassInNonGenericObjectType: false
+    ignoreErrors:
+        - identifier: missingType.iterableValue
