@@ -7,6 +7,7 @@ namespace OpenFeature\Providers\AwsAppConfig\Source;
 use OpenFeature\Providers\AwsAppConfig\Configuration;
 use OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException;
 use OpenFeature\Providers\AwsAppConfig\Exception\ConfigurationNotFoundException;
+use OpenFeature\interfaces\flags\EvaluationContext;
 
 /**
  * AppConfig Agent-based configuration source
@@ -58,6 +59,22 @@ class AgentSource implements ConfigurationSourceInterface
         }
     }
 
+    public function evaluateFlag(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
+    {
+        // Try to use AppConfig Agent's evaluation API if available
+        if ($this->isAgentEvaluationAvailable($config)) {
+            return $this->evaluateFlagWithAgent($flagKey, $config, $context, $defaultValue);
+        }
+
+        // Fallback to local evaluation
+        return $this->evaluateFlagLocally($flagKey, $config, $context, $defaultValue);
+    }
+
+    public function supportsLocalEvaluation(): bool
+    {
+        return true;
+    }
+
     public function supportsPolling(): bool
     {
         return true;
@@ -82,6 +99,121 @@ class AgentSource implements ConfigurationSourceInterface
     {
         $localConfigPath = $this->getLocalConfigPath($config);
         return file_exists($localConfigPath) && is_readable($localConfigPath);
+    }
+
+        /**
+     * Check if AppConfig Agent evaluation API is available
+     *
+     * @param Configuration $config Provider configuration
+     * @return bool True if agent evaluation is available
+     */
+    private function isAgentEvaluationAvailable(Configuration $config): bool
+    {
+        $agentHost = $config->getAgentHost() ?? 'localhost';
+        $agentPort = $config->getAgentPort() ?? 2772;
+        $evaluationEndpoint = "http://{$agentHost}:{$agentPort}/evaluate";
+
+        // Try to connect to the agent's HTTP endpoint
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 1,
+                'method' => 'HEAD'
+            ]
+        ]);
+
+        $result = @file_get_contents($evaluationEndpoint, false, $context);
+        return $result !== false;
+    }
+
+    /**
+     * Evaluate flag using AppConfig Agent's HTTP API
+     *
+     * @param string $flagKey Feature flag key
+     * @param Configuration $config Provider configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     * @throws AwsAppConfigException
+     */
+    private function evaluateFlagWithAgent(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
+    {
+        $agentHost = $config->getAgentHost() ?? 'localhost';
+        $agentPort = $config->getAgentPort() ?? 2772;
+        $evaluationEndpoint = "http://{$agentHost}:{$agentPort}/evaluate";
+
+        // Prepare evaluation request
+        $request = [
+            'flagKey' => $flagKey,
+            'application' => $config->getApplication(),
+            'environment' => $config->getEnvironment(),
+            'configurationProfile' => $config->getConfigurationProfile(),
+            'context' => $context->getAttributes()->toArray(),
+            'defaultValue' => $defaultValue,
+        ];
+
+        try {
+            // Prepare HTTP request
+            $httpContext = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => [
+                        'Content-Type: application/json',
+                        'Accept: application/json'
+                    ],
+                    'content' => json_encode($request),
+                    'timeout' => 5
+                ]
+            ]);
+
+            // Send HTTP request to agent
+            $response = file_get_contents($evaluationEndpoint, false, $httpContext);
+
+            if ($response === false) {
+                throw new AwsAppConfigException('Failed to connect to AppConfig Agent');
+            }
+
+            // Parse response
+            $result = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new AwsAppConfigException('Invalid JSON response from agent evaluation');
+            }
+
+            return $result['value'] ?? $defaultValue;
+        } catch (\Exception $e) {
+            if ($e instanceof AwsAppConfigException) {
+                throw $e;
+            }
+
+            throw new AwsAppConfigException(
+                'Failed to evaluate flag with agent: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Evaluate flag using local evaluation (fallback)
+     *
+     * @param string $flagKey Feature flag key
+     * @param Configuration $config Provider configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     * @throws AwsAppConfigException
+     */
+    private function evaluateFlagLocally(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
+    {
+        $configuration = $this->loadConfiguration($config);
+        $features = $configuration['features'] ?? [];
+        $flag = $features[$flagKey] ?? null;
+
+        if ($flag === null) {
+            return $defaultValue;
+        }
+
+        // Use local evaluation logic (existing FeatureFlagEvaluator logic)
+        return $this->evaluateFlagLocally($flag, $context, $defaultValue);
     }
 
     /**
@@ -149,4 +281,6 @@ class AgentSource implements ConfigurationSourceInterface
             $this->lastModified = $fileTime !== false ? $fileTime : null;
         }
     }
+
+
 }

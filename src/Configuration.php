@@ -47,7 +47,9 @@ class Configuration
         private readonly ?string $localConfigPath = null,
         private readonly bool $enablePolling = false,
         private readonly bool $enableWebhooks = false,
-        private readonly ?string $webhookEndpoint = null
+        private readonly ?string $webhookEndpoint = null,
+        private readonly ?string $agentHost = null,
+        private readonly ?int $agentPort = null
     ) {
     }
 
@@ -129,5 +131,15 @@ class Configuration
     public function getWebhookEndpoint(): ?string
     {
         return $this->webhookEndpoint;
+    }
+
+    public function getAgentHost(): ?string
+    {
+        return $this->agentHost;
+    }
+
+    public function getAgentPort(): ?int
+    {
+        return $this->agentPort;
     }
 }
