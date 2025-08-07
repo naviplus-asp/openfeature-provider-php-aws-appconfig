@@ -31,7 +31,12 @@ interface ConfigurationSourceInterface
      * @return mixed Evaluated value
      * @throws \OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException
      */
-    public function evaluateFlag(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed;
+    public function evaluateFlag(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed;
 
     /**
      * Check if this source supports local flag evaluation

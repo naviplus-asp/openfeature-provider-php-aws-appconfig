@@ -59,8 +59,12 @@ class AgentSource implements ConfigurationSourceInterface
         }
     }
 
-    public function evaluateFlag(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
-    {
+    public function evaluateFlag(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
         // Try to use AppConfig Agent's HTTP evaluation API if available
         if ($this->isAgentEvaluationAvailable($config)) {
             return $this->evaluateFlagWithAgent($flagKey, $config, $context, $defaultValue);
@@ -137,8 +141,12 @@ class AgentSource implements ConfigurationSourceInterface
      * @return mixed Evaluated value
      * @throws AwsAppConfigException
      */
-    private function evaluateFlagWithAgent(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
-    {
+    private function evaluateFlagWithAgent(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
         $agentHost = $config->getAgentHost() ?? 'localhost';
         $agentPort = $config->getAgentPort() ?? 2772;
         $evaluationEndpoint = "http://{$agentHost}:{$agentPort}/evaluate";
@@ -204,8 +212,12 @@ class AgentSource implements ConfigurationSourceInterface
      * @return mixed Evaluated value
      * @throws AwsAppConfigException
      */
-    private function evaluateFlagLocally(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
-    {
+    private function evaluateFlagLocally(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
         $configuration = $this->loadConfiguration($config);
         $features = $configuration['features'] ?? [];
         $flag = $features[$flagKey] ?? null;
@@ -214,8 +226,103 @@ class AgentSource implements ConfigurationSourceInterface
             return $defaultValue;
         }
 
-        // Use local evaluation logic (existing FeatureFlagEvaluator logic)
-        return $this->evaluateFlagLocally($flag, $context, $defaultValue);
+        // Use local evaluation logic (simplified implementation)
+        return $this->evaluateFlagValue($flag, $context, $defaultValue);
+    }
+
+    /**
+     * Evaluate flag value based on rules and context
+     *
+     * @param array $flag Flag configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     */
+    private function evaluateFlagValue(array $flag, EvaluationContext $context, mixed $defaultValue): mixed
+    {
+        // Check if flag has rules
+        $rules = $flag['rules'] ?? [];
+
+        if (empty($rules)) {
+            return $flag['default'] ?? $defaultValue;
+        }
+
+        // Evaluate rules in order
+        foreach ($rules as $rule) {
+            if ($this->evaluateRule($rule, $context)) {
+                return $rule['value'] ?? $defaultValue;
+            }
+        }
+
+        // Return default value if no rules match
+        return $flag['default'] ?? $defaultValue;
+    }
+
+    /**
+     * Evaluate a single rule
+     *
+     * @param array $rule Rule configuration
+     * @param EvaluationContext $context Evaluation context
+     * @return bool True if rule matches, false otherwise
+     */
+    private function evaluateRule(array $rule, EvaluationContext $context): bool
+    {
+        $condition = $rule['condition'] ?? null;
+
+        if ($condition === null) {
+            return true; // No condition means always match
+        }
+
+        // Simple condition evaluation (can be extended for more complex expressions)
+        return $this->evaluateCondition($condition, $context);
+    }
+
+    /**
+     * Evaluate a condition expression
+     *
+     * @param string $condition Condition expression
+     * @param EvaluationContext $context Evaluation context
+     * @return bool True if condition is met, false otherwise
+     */
+    private function evaluateCondition(string $condition, EvaluationContext $context): bool
+    {
+        // Simple condition evaluation - can be extended with a proper expression parser
+        // For now, we'll implement basic equality checks
+
+        if (preg_match('/^(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
+            $path = $matches[1];
+            $expectedValue = $matches[2];
+
+            $actualValue = $this->getValueFromContext($path, $context);
+
+            return $actualValue === $expectedValue;
+        }
+
+        // Default to false for unrecognized conditions
+        return false;
+    }
+
+    /**
+     * Get value from context using dot notation
+     *
+     * @param string $path Dot notation path (e.g., "user.id")
+     * @param EvaluationContext $context Evaluation context
+     * @return mixed Value at path or null if not found
+     */
+    private function getValueFromContext(string $path, EvaluationContext $context): mixed
+    {
+        $keys = explode('.', $path);
+        $attributes = $context->getAttributes();
+        $value = $attributes->toArray();
+
+        foreach ($keys as $key) {
+            if (!is_array($value) || !array_key_exists($key, $value)) {
+                return null;
+            }
+            $value = $value[$key];
+        }
+
+        return $value;
     }
 
     /**
@@ -283,6 +390,4 @@ class AgentSource implements ConfigurationSourceInterface
             $this->lastModified = $fileTime !== false ? $fileTime : null;
         }
     }
-
-
 }
