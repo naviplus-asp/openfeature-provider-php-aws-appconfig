@@ -2,7 +2,7 @@
     "name": "openfeature/php-aws-appconfig-provider",
     "description": "OpenFeature provider for PHP that uses AWS AppConfig as the backend configuration store",
     "type": "library",
-    "license": "Apache-2.0",
+    "license": "MIT",
     "keywords": [
         "openfeature",
         "feature-flags",
