@@ -88,14 +88,24 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
     ): ResolutionDetails {
         try {
             $context = $context ?? new EvaluationContextImpl();
-            $configuration = $this->configurationManager->getConfiguration();
 
-            $value = $this->evaluator->evaluateBoolean(
-                $flagKey,
-                $configuration,
-                $context,
-                $defaultValue
-            );
+            // Use source's evaluation if available, otherwise use local evaluator
+            if ($this->configurationManager->getSource()->supportsLocalEvaluation()) {
+                $value = $this->configurationManager->getSource()->evaluateFlag(
+                    $flagKey,
+                    $this->configurationManager->getConfig(),
+                    $context,
+                    $defaultValue
+                );
+            } else {
+                $configuration = $this->configurationManager->getConfiguration();
+                $value = $this->evaluator->evaluateBoolean(
+                    $flagKey,
+                    $configuration,
+                    $context,
+                    $defaultValue
+                );
+            }
 
             $details = new ResolutionDetailsImpl();
             $details->setValue($value);

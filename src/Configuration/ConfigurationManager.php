@@ -44,6 +44,26 @@ class ConfigurationManager
     }
 
     /**
+     * Get the configuration source
+     *
+     * @return ConfigurationSourceInterface Configuration source
+     */
+    public function getSource(): ConfigurationSourceInterface
+    {
+        return $this->source;
+    }
+
+    /**
+     * Get the configuration object
+     *
+     * @return Configuration Configuration object
+     */
+    public function getConfig(): Configuration
+    {
+        return $this->config;
+    }
+
+    /**
      * Refresh the configuration from the source
      *
      * @throws AwsAppConfigException

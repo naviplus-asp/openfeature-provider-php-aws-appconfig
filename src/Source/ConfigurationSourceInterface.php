@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenFeature\Providers\AwsAppConfig\Source;
 
 use OpenFeature\Providers\AwsAppConfig\Configuration;
+use OpenFeature\interfaces\flags\EvaluationContext;
 
 /**
  * Interface for configuration sources (AWS SDK, AppConfig Agent, etc.)
@@ -19,6 +20,30 @@ interface ConfigurationSourceInterface
      * @throws \OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException
      */
     public function loadConfiguration(Configuration $config): array;
+
+    /**
+     * Evaluate a feature flag with context using the source's evaluation engine
+     *
+     * @param string $flagKey Feature flag key
+     * @param Configuration $config Provider configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value if flag is not found
+     * @return mixed Evaluated value
+     * @throws \OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException
+     */
+    public function evaluateFlag(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed;
+
+    /**
+     * Check if this source supports local flag evaluation
+     *
+     * @return bool True if local evaluation is supported
+     */
+    public function supportsLocalEvaluation(): bool;
 
     /**
      * Check if this source supports polling for updates

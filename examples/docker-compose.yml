@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_CONFIG_AGENT_HOST=agent
+      - APP_CONFIG_AGENT_PORT=2772
+    depends_on:
+      - agent
+    networks:
+      - app-network
+
+  agent:
+    image: appconfig-agent:latest
+    environment:
+      - AGENT_HOST=0.0.0.0
+      - AGENT_PORT=2772
+      - AGENT_PATH=/opt/appconfig-agent
+      - AWS_REGION=us-east-1
+      - AWS_APPCONFIG_APPLICATION=my-app
+      - AWS_APPCONFIG_ENVIRONMENT=production
+      - AWS_APPCONFIG_CONFIGURATION_PROFILE=feature-flags
+    volumes:
+      - ./configs:/opt/appconfig-agent/configs
+    ports:
+      - "2772:2772"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2772/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app-network:
+    driver: bridge

@@ -7,6 +7,7 @@ namespace OpenFeature\Providers\AwsAppConfig\Source;
 use OpenFeature\Providers\AwsAppConfig\Configuration;
 use OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException;
 use OpenFeature\Providers\AwsAppConfig\Exception\ConfigurationNotFoundException;
+use OpenFeature\interfaces\flags\EvaluationContext;
 
 /**
  * AppConfig Agent-based configuration source
@@ -58,6 +59,28 @@ class AgentSource implements ConfigurationSourceInterface
         }
     }
 
+    public function evaluateFlag(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
+        // Try to use AppConfig Agent's HTTP evaluation API if available
+        if ($this->isAgentEvaluationAvailable($config)) {
+            return $this->evaluateFlagWithAgent($flagKey, $config, $context, $defaultValue);
+        }
+
+        // Fallback to local evaluation
+        return $this->evaluateFlagLocally($flagKey, $config, $context, $defaultValue);
+    }
+
+    public function supportsLocalEvaluation(): bool
+    {
+        return true;
+    }
+
+
+
     public function supportsPolling(): bool
     {
         return true;
@@ -82,6 +105,224 @@ class AgentSource implements ConfigurationSourceInterface
     {
         $localConfigPath = $this->getLocalConfigPath($config);
         return file_exists($localConfigPath) && is_readable($localConfigPath);
+    }
+
+        /**
+     * Check if AppConfig Agent evaluation API is available
+     *
+     * @param Configuration $config Provider configuration
+     * @return bool True if agent evaluation is available
+     */
+    private function isAgentEvaluationAvailable(Configuration $config): bool
+    {
+        $agentHost = $config->getAgentHost() ?? 'localhost';
+        $agentPort = $config->getAgentPort() ?? 2772;
+        $evaluationEndpoint = "http://{$agentHost}:{$agentPort}/evaluate";
+
+        // Try to connect to the agent's HTTP endpoint
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 1,
+                'method' => 'HEAD'
+            ]
+        ]);
+
+        $result = @file_get_contents($evaluationEndpoint, false, $context);
+        return $result !== false;
+    }
+
+    /**
+     * Evaluate flag using AppConfig Agent's HTTP API
+     *
+     * @param string $flagKey Feature flag key
+     * @param Configuration $config Provider configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     * @throws AwsAppConfigException
+     */
+    private function evaluateFlagWithAgent(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
+        $agentHost = $config->getAgentHost() ?? 'localhost';
+        $agentPort = $config->getAgentPort() ?? 2772;
+        $evaluationEndpoint = "http://{$agentHost}:{$agentPort}/evaluate";
+
+        // Prepare evaluation request
+        $request = [
+            'flagKey' => $flagKey,
+            'application' => $config->getApplication(),
+            'environment' => $config->getEnvironment(),
+            'configurationProfile' => $config->getConfigurationProfile(),
+            'context' => $context->getAttributes()->toArray(),
+            'defaultValue' => $defaultValue,
+        ];
+
+        try {
+            // Prepare HTTP request
+            $httpContext = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => [
+                        'Content-Type: application/json',
+                        'Accept: application/json'
+                    ],
+                    'content' => json_encode($request),
+                    'timeout' => 5
+                ]
+            ]);
+
+            // Send HTTP request to agent
+            $response = file_get_contents($evaluationEndpoint, false, $httpContext);
+
+            if ($response === false) {
+                throw new AwsAppConfigException('Failed to connect to AppConfig Agent');
+            }
+
+            // Parse response
+            $result = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new AwsAppConfigException('Invalid JSON response from agent evaluation');
+            }
+
+            return $result['value'] ?? $defaultValue;
+        } catch (\Exception $e) {
+            if ($e instanceof AwsAppConfigException) {
+                throw $e;
+            }
+
+            throw new AwsAppConfigException(
+                'Failed to evaluate flag with agent: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Evaluate flag using local evaluation (fallback)
+     *
+     * @param string $flagKey Feature flag key
+     * @param Configuration $config Provider configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     * @throws AwsAppConfigException
+     */
+    private function evaluateFlagLocally(
+        string $flagKey,
+        Configuration $config,
+        EvaluationContext $context,
+        mixed $defaultValue
+    ): mixed {
+        $configuration = $this->loadConfiguration($config);
+        $features = $configuration['features'] ?? [];
+        $flag = $features[$flagKey] ?? null;
+
+        if ($flag === null) {
+            return $defaultValue;
+        }
+
+        // Use local evaluation logic (simplified implementation)
+        return $this->evaluateFlagValue($flag, $context, $defaultValue);
+    }
+
+    /**
+     * Evaluate flag value based on rules and context
+     *
+     * @param array $flag Flag configuration
+     * @param EvaluationContext $context Evaluation context
+     * @param mixed $defaultValue Default value
+     * @return mixed Evaluated value
+     */
+    private function evaluateFlagValue(array $flag, EvaluationContext $context, mixed $defaultValue): mixed
+    {
+        // Check if flag has rules
+        $rules = $flag['rules'] ?? [];
+
+        if (empty($rules)) {
+            return $flag['default'] ?? $defaultValue;
+        }
+
+        // Evaluate rules in order
+        foreach ($rules as $rule) {
+            if ($this->evaluateRule($rule, $context)) {
+                return $rule['value'] ?? $defaultValue;
+            }
+        }
+
+        // Return default value if no rules match
+        return $flag['default'] ?? $defaultValue;
+    }
+
+    /**
+     * Evaluate a single rule
+     *
+     * @param array $rule Rule configuration
+     * @param EvaluationContext $context Evaluation context
+     * @return bool True if rule matches, false otherwise
+     */
+    private function evaluateRule(array $rule, EvaluationContext $context): bool
+    {
+        $condition = $rule['condition'] ?? null;
+
+        if ($condition === null) {
+            return true; // No condition means always match
+        }
+
+        // Simple condition evaluation (can be extended for more complex expressions)
+        return $this->evaluateCondition($condition, $context);
+    }
+
+    /**
+     * Evaluate a condition expression
+     *
+     * @param string $condition Condition expression
+     * @param EvaluationContext $context Evaluation context
+     * @return bool True if condition is met, false otherwise
+     */
+    private function evaluateCondition(string $condition, EvaluationContext $context): bool
+    {
+        // Simple condition evaluation - can be extended with a proper expression parser
+        // For now, we'll implement basic equality checks
+
+        if (preg_match('/^(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
+            $path = $matches[1];
+            $expectedValue = $matches[2];
+
+            $actualValue = $this->getValueFromContext($path, $context);
+
+            return $actualValue === $expectedValue;
+        }
+
+        // Default to false for unrecognized conditions
+        return false;
+    }
+
+    /**
+     * Get value from context using dot notation
+     *
+     * @param string $path Dot notation path (e.g., "user.id")
+     * @param EvaluationContext $context Evaluation context
+     * @return mixed Value at path or null if not found
+     */
+    private function getValueFromContext(string $path, EvaluationContext $context): mixed
+    {
+        $keys = explode('.', $path);
+        $attributes = $context->getAttributes();
+        $value = $attributes->toArray();
+
+        foreach ($keys as $key) {
+            if (!is_array($value) || !array_key_exists($key, $value)) {
+                return null;
+            }
+            $value = $value[$key];
+        }
+
+        return $value;
     }
 
     /**
