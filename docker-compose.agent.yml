@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  appconfig-agent:
+    image: public.ecr.aws/aws-appconfig/aws-appconfig-agent:latest
+    container_name: appconfig-agent-test
+    ports:
+      - "2772:2772"
+    environment:
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test-key}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test-secret}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
+    volumes:
+      - ./tests/Integration/test-config:/opt/appconfig-agent/config
+    command: >
+      --local_development_directory /opt/appconfig-agent/config
+      --http_port 2772
+      --poll_interval 30s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2772/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - appconfig-test
+
+networks:
+  appconfig-test:
+    driver: bridge

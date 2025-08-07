@@ -64,6 +64,21 @@ class ConfigurationManager
     }
 
     /**
+     * Set mock configuration for testing
+     *
+     * @param array|null $configuration Mock configuration data
+     */
+    public function setMockConfiguration(?array $configuration): void
+    {
+        if (
+            $this->source instanceof \OpenFeature\Providers\AwsAppConfig\Source\AgentSource ||
+            $this->source instanceof \OpenFeature\Providers\AwsAppConfig\Source\AwsSdkSource
+        ) {
+            $this->source->setMockConfiguration($configuration);
+        }
+    }
+
+    /**
      * Refresh the configuration from the source
      *
      * @throws AwsAppConfigException

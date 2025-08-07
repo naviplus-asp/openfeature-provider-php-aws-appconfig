@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "configurations": [
+    {
+      "application": "test-app",
+      "environment": "test",
+      "configuration": "feature-flags",
+      "file": "feature-flags.json",
+      "type": "feature-flags"
+    }
+  ]
+}

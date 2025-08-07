@@ -292,9 +292,35 @@ composer test
 # Run tests with coverage
 composer test-coverage
 
+# Run unit tests only
+composer test-unit
+
+# Run integration tests only
+composer test-integration
+
 # Run specific test file
 ./vendor/bin/phpunit tests/Unit/AwsAppConfigProviderTest.php
 ```
+
+#### Integration Testing with Docker
+
+The project includes integration tests that can run against a real AppConfig Agent using Docker:
+
+```bash
+# Start AppConfig Agent (Docker required)
+composer agent:start
+
+# Run integration tests with agent
+composer test-integration
+
+# Stop AppConfig Agent
+composer agent:stop
+
+# Or run all integration tests with agent automatically
+composer test:with-agent
+```
+
+The integration tests will automatically detect if the Docker agent is available and use it for testing. If the agent is not available, the tests will fall back to using mock data.
 
 ### Code Quality
 
