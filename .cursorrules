@@ -199,3 +199,24 @@ This project implements an OpenFeature provider for PHP that uses AWS AppConfig 
 - Use appropriate AWS regions
 - Monitor AWS costs
 - Implement proper security measures
+
+## Task Completion Checklist
+
+### Quality Assurance
+- **タスク完了時は必ずPHPCSとPHPStanを実行する**
+- **コードスタイル違反がないことを確認する**
+- **静的解析エラーがないことを確認する**
+- **必要に応じて自動修正（phpcbf）を実行する**
+- **修正後は再度PHPCSとPHPStanで確認する**
+
+### Commands to Run
+```bash
+# コードスタイルチェック
+composer phpcs
+
+# 静的解析
+composer phpstan
+
+# 自動修正（必要に応じて）
+composer phpcbf
+```
