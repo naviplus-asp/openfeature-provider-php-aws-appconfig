@@ -206,7 +206,7 @@ class FeatureFlagEvaluator
      * @param EvaluationContext $context Evaluation context
      * @return mixed Value at path or null if not found
      */
-        private function getValueFromContext(string $path, EvaluationContext $context): mixed
+    private function getValueFromContext(string $path, EvaluationContext $context): mixed
     {
         $keys = explode('.', $path);
         $attributes = $context->getAttributes();

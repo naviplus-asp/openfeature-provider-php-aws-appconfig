@@ -34,7 +34,7 @@ class AwsAppConfigProvider implements Provider
     private ConfigurationManager $configurationManager;
     private ?LoggerInterface $logger;
 
-        public function __construct(Configuration $config)
+    public function __construct(Configuration $config)
     {
         $this->evaluator = new FeatureFlagEvaluator();
         $this->logger = $config->getLogger();
@@ -65,7 +65,7 @@ class AwsAppConfigProvider implements Provider
         ];
     }
 
-        public function resolveBooleanValue(
+    public function resolveBooleanValue(
         string $flagKey,
         bool $defaultValue,
         ?EvaluationContext $context = null
@@ -100,7 +100,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveStringValue(
+    public function resolveStringValue(
         string $flagKey,
         string $defaultValue,
         ?EvaluationContext $context = null
@@ -135,7 +135,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveIntegerValue(
+    public function resolveIntegerValue(
         string $flagKey,
         int $defaultValue,
         ?EvaluationContext $context = null
@@ -205,7 +205,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveObjectValue(
+    public function resolveObjectValue(
         string $flagKey,
         bool | string | int | float | \DateTime | array | null $defaultValue,
         ?EvaluationContext $context = null
