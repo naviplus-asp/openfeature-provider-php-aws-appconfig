@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenFeature\Providers\AwsAppConfig\Configuration;
 
 use OpenFeature\Providers\AwsAppConfig\Cache\CacheInterface;
+use OpenFeature\Providers\AwsAppConfig\Configuration;
 use OpenFeature\Providers\AwsAppConfig\Exception\AwsAppConfigException;
 use OpenFeature\Providers\AwsAppConfig\Source\ConfigurationSourceInterface;
 use Psr\Log\LoggerInterface;

@@ -12,6 +12,9 @@ use OpenFeature\interfaces\provider\ResolutionDetails;
 use OpenFeature\implementation\provider\ResolutionDetails as ResolutionDetailsImpl;
 use OpenFeature\implementation\provider\Reason;
 use OpenFeature\implementation\flags\EvaluationContext as EvaluationContextImpl;
+use OpenFeature\interfaces\hooks\HooksGetter;
+use OpenFeature\interfaces\common\MetadataGetter;
+use OpenFeature\interfaces\common\Metadata;
 use OpenFeature\Providers\AwsAppConfig\Cache\CacheInterface;
 use OpenFeature\Providers\AwsAppConfig\Cache\Psr6Cache;
 use OpenFeature\Providers\AwsAppConfig\Configuration\ConfigurationManager;
@@ -24,17 +27,18 @@ use OpenFeature\Providers\AwsAppConfig\Source\ConfigurationSourceInterface;
 use OpenFeature\Providers\AwsAppConfig\Configuration\ConfigurationSourceType;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareInterface;
 
 /**
  * AWS AppConfig Provider for OpenFeature
  */
-class AwsAppConfigProvider implements Provider
+class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, LoggerAwareInterface
 {
     private FeatureFlagEvaluator $evaluator;
     private ConfigurationManager $configurationManager;
     private ?LoggerInterface $logger;
 
-        public function __construct(Configuration $config)
+    public function __construct(Configuration $config)
     {
         $this->evaluator = new FeatureFlagEvaluator();
         $this->logger = $config->getLogger();
@@ -57,15 +61,27 @@ class AwsAppConfigProvider implements Provider
         );
     }
 
-    public function getMetadata(): array
+    public function getMetadata(): Metadata
     {
-        return [
-            'name' => 'aws-appconfig',
-            'version' => '1.0.0',
-        ];
+        return new class implements Metadata {
+            public function getName(): string
+            {
+                return 'aws-appconfig';
+            }
+        };
     }
 
-        public function resolveBooleanValue(
+    public function getHooks(): array
+    {
+        return [];
+    }
+
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
+    }
+
+    public function resolveBooleanValue(
         string $flagKey,
         bool $defaultValue,
         ?EvaluationContext $context = null
@@ -100,7 +116,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveStringValue(
+    public function resolveStringValue(
         string $flagKey,
         string $defaultValue,
         ?EvaluationContext $context = null
@@ -135,7 +151,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveIntegerValue(
+    public function resolveIntegerValue(
         string $flagKey,
         int $defaultValue,
         ?EvaluationContext $context = null
@@ -205,7 +221,7 @@ class AwsAppConfigProvider implements Provider
         }
     }
 
-        public function resolveObjectValue(
+    public function resolveObjectValue(
         string $flagKey,
         bool | string | int | float | \DateTime | array | null $defaultValue,
         ?EvaluationContext $context = null
@@ -214,11 +230,14 @@ class AwsAppConfigProvider implements Provider
             $context = $context ?? new EvaluationContextImpl();
             $configuration = $this->configurationManager->getConfiguration();
 
+            // Ensure defaultValue is an array for object evaluation
+            $objectDefaultValue = is_array($defaultValue) ? $defaultValue : [];
+
             $value = $this->evaluator->evaluateObject(
                 $flagKey,
                 $configuration,
                 $context,
-                $defaultValue
+                $objectDefaultValue
             );
 
             $details = new ResolutionDetailsImpl();
@@ -296,19 +315,6 @@ class AwsAppConfigProvider implements Provider
         // For now, fallback to AWS SDK
         // Future implementation will combine both sources
         return $this->createAwsSdkSource($config);
-    }
-
-    /**
-     * Log info message
-     *
-     * @param string $message Log message
-     * @param array $context Log context
-     */
-    private function logInfo(string $message, array $context = []): void
-    {
-        if ($this->logger !== null) {
-            $this->logger->info($message, $context);
-        }
     }
 
     /**

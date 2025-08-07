@@ -145,7 +145,8 @@ class AgentSource implements ConfigurationSourceInterface
 
         // Fallback to file modification time
         if ($this->lastModified === null) {
-            $this->lastModified = filemtime($configPath);
+            $fileTime = filemtime($configPath);
+            $this->lastModified = $fileTime !== false ? $fileTime : null;
         }
     }
 }

@@ -1,5 +1,11 @@
 # OpenFeature PHP AWS AppConfig Provider - Cursor Rules
 
+## 言語設定 / Language Settings
+- **ユーザーとのやり取りは日本語で行う**
+- **コードコメント、ドキュメント、コミットメッセージは英語で記述**
+- **技術用語は必要に応じて英語と日本語の両方を使用**
+- **エラーメッセージやログは英語で記述**
+
 ## Project Overview
 This project implements an OpenFeature provider for PHP that uses AWS AppConfig as the backend configuration store. The provider follows the OpenFeature specification and integrates with AWS AppConfig for feature flag management.
 
@@ -135,6 +141,7 @@ This project implements an OpenFeature provider for PHP that uses AWS AppConfig 
 - Include issue numbers when applicable
 - Write descriptive commit messages
 - Keep commits focused and atomic
+- **コミットメッセージは英語で記述し、必要に応じて日本語での説明を追加**
 
 ### Branch Strategy
 - Use feature branches for new development
@@ -192,3 +199,24 @@ This project implements an OpenFeature provider for PHP that uses AWS AppConfig 
 - Use appropriate AWS regions
 - Monitor AWS costs
 - Implement proper security measures
+
+## Task Completion Checklist
+
+### Quality Assurance
+- **タスク完了時は必ずPHPCSとPHPStanを実行する**
+- **コードスタイル違反がないことを確認する**
+- **静的解析エラーがないことを確認する**
+- **必要に応じて自動修正（phpcbf）を実行する**
+- **修正後は再度PHPCSとPHPStanで確認する**
+
+### Commands to Run
+```bash
+# コードスタイルチェック
+composer phpcs
+
+# 静的解析
+composer phpstan
+
+# 自動修正（必要に応じて）
+composer phpcbf
+```

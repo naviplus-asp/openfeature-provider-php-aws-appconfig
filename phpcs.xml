@@ -3,7 +3,9 @@
     <description>PSR-12 coding standards for OpenFeature PHP AWS AppConfig Provider</description>
 
     <file>src</file>
-    <file>tests</file>
+    <file>tests/Unit</file>
+    <file>tests/Feature</file>
+    <file>tests/Integration</file>
 
     <rule ref="PSR12"/>
 
