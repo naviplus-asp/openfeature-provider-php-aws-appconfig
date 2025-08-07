@@ -232,7 +232,7 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
 
             // Ensure defaultValue is an array for object evaluation
             $objectDefaultValue = is_array($defaultValue) ? $defaultValue : [];
-            
+
             $value = $this->evaluator->evaluateObject(
                 $flagKey,
                 $configuration,
