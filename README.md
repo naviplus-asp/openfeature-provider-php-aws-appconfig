@@ -1,7 +1,7 @@
 # OpenFeature PHP AWS AppConfig Provider
 
 [![PHP Version](https://img.shields.io/badge/php-8.1%2B-blue.svg)](https://php.net)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![OpenFeature](https://img.shields.io/badge/OpenFeature-Provider-green.svg)](https://openfeature.dev)
 
 An OpenFeature provider for PHP that uses AWS AppConfig as the backend configuration store for feature flags.
@@ -320,7 +320,7 @@ composer phpcbf
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
