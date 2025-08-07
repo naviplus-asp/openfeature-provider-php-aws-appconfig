@@ -61,7 +61,7 @@ class AgentSource implements ConfigurationSourceInterface
 
     public function evaluateFlag(string $flagKey, Configuration $config, EvaluationContext $context, mixed $defaultValue): mixed
     {
-        // Try to use AppConfig Agent's evaluation API if available
+        // Try to use AppConfig Agent's HTTP evaluation API if available
         if ($this->isAgentEvaluationAvailable($config)) {
             return $this->evaluateFlagWithAgent($flagKey, $config, $context, $defaultValue);
         }
@@ -74,6 +74,8 @@ class AgentSource implements ConfigurationSourceInterface
     {
         return true;
     }
+
+
 
     public function supportsPolling(): bool
     {
