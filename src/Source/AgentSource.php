@@ -16,9 +16,23 @@ class AgentSource implements ConfigurationSourceInterface
 {
     private ?string $configurationVersion = null;
     private ?int $lastModified = null;
+    private ?array $mockConfiguration = null;
+
+    /**
+     * Set mock configuration for testing
+     */
+    public function setMockConfiguration(?array $configuration): void
+    {
+        $this->mockConfiguration = $configuration;
+    }
 
     public function loadConfiguration(Configuration $config): array
     {
+        // Return mock configuration if set (for testing)
+        if ($this->mockConfiguration !== null) {
+            return $this->mockConfiguration;
+        }
+
         $localConfigPath = $this->getLocalConfigPath($config);
 
         if (!file_exists($localConfigPath)) {
@@ -219,8 +233,8 @@ class AgentSource implements ConfigurationSourceInterface
         mixed $defaultValue
     ): mixed {
         $configuration = $this->loadConfiguration($config);
-        $features = $configuration['features'] ?? [];
-        $flag = $features[$flagKey] ?? null;
+        $flags = $configuration['flags'] ?? [];
+        $flag = $flags[$flagKey] ?? null;
 
         if ($flag === null) {
             return $defaultValue;
@@ -240,22 +254,33 @@ class AgentSource implements ConfigurationSourceInterface
      */
     private function evaluateFlagValue(array $flag, EvaluationContext $context, mixed $defaultValue): mixed
     {
-        // Check if flag has rules
-        $rules = $flag['rules'] ?? [];
+        // Check if flag is enabled
+        if (($flag['state'] ?? 'DISABLED') !== 'ENABLED') {
+            return $defaultValue;
+        }
+
+        // Get default variants
+        $defaultVariants = $flag['defaultVariants'] ?? [];
+
+        // Check if flag has targeting rules
+        $targeting = $flag['targeting'] ?? null;
+        $rules = $targeting['rules'] ?? [];
 
         if (empty($rules)) {
-            return $flag['default'] ?? $defaultValue;
+            // Return first available default variant or defaultValue
+            return $this->getFirstVariant($defaultVariants) ?? $defaultValue;
         }
 
         // Evaluate rules in order
         foreach ($rules as $rule) {
             if ($this->evaluateRule($rule, $context)) {
-                return $rule['value'] ?? $defaultValue;
+                $variants = $rule['variants'] ?? [];
+                return $this->getFirstVariant($variants) ?? $defaultValue;
             }
         }
 
         // Return default value if no rules match
-        return $flag['default'] ?? $defaultValue;
+        return $this->getFirstVariant($defaultVariants) ?? $defaultValue;
     }
 
     /**
@@ -289,8 +314,8 @@ class AgentSource implements ConfigurationSourceInterface
         // Simple condition evaluation - can be extended with a proper expression parser
         // For now, we'll implement basic equality checks
 
-        if (preg_match('/^(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
-            $path = $matches[1];
+        if (preg_match('/^([^=]+)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
+            $path = trim($matches[1]);
             $expectedValue = $matches[2];
 
             $actualValue = $this->getValueFromContext($path, $context);
@@ -300,6 +325,27 @@ class AgentSource implements ConfigurationSourceInterface
 
         // Default to false for unrecognized conditions
         return false;
+    }
+
+    /**
+     * Get first available variant from variants array
+     *
+     * @param array $variants Variants array
+     * @return mixed First variant value or null
+     */
+    private function getFirstVariant(array $variants): mixed
+    {
+        if (empty($variants)) {
+            return null;
+        }
+
+        // Return first available variant value
+        foreach ($variants as $type => $value) {
+            return $value;
+        }
+
+        // This should never be reached, but PHPStan requires it
+        return null;
     }
 
     /**

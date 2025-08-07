@@ -44,6 +44,8 @@
     "scripts": {
         "test": "phpunit",
         "test-coverage": "phpunit --coverage-html coverage",
+        "test-integration": "phpunit --testsuite=Integration",
+        "test-unit": "phpunit --testsuite=Unit",
         "phpstan": "phpstan analyse",
         "phpcs": "phpcs --standard=PSR12 src/ tests/",
         "phpcbf": "phpcbf --standard=PSR12 src/ tests/",
@@ -51,6 +53,13 @@
             "@phpstan",
             "@phpcs",
             "@test"
+        ],
+        "agent:start": "./scripts/start-agent.sh",
+        "agent:stop": "./scripts/stop-agent.sh",
+        "test:with-agent": [
+            "@agent:start",
+            "@test-integration",
+            "@agent:stop"
         ]
     },
     "config": {

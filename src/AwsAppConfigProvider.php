@@ -81,6 +81,16 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
         $this->logger = $logger;
     }
 
+    /**
+     * Get the configuration manager (for testing)
+     *
+     * @return ConfigurationManager Configuration manager
+     */
+    public function getConfigurationManager(): ConfigurationManager
+    {
+        return $this->configurationManager;
+    }
+
     public function resolveBooleanValue(
         string $flagKey,
         bool $defaultValue,
@@ -133,17 +143,27 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
     ): ResolutionDetails {
         try {
             $context = $context ?? new EvaluationContextImpl();
-            $configuration = $this->configurationManager->getConfiguration();
 
-            $value = $this->evaluator->evaluateString(
-                $flagKey,
-                $configuration,
-                $context,
-                $defaultValue
-            );
+            // Use source's evaluation if available, otherwise use local evaluator
+            if ($this->configurationManager->getSource()->supportsLocalEvaluation()) {
+                $value = $this->configurationManager->getSource()->evaluateFlag(
+                    $flagKey,
+                    $this->configurationManager->getConfig(),
+                    $context,
+                    $defaultValue
+                );
+            } else {
+                $configuration = $this->configurationManager->getConfiguration();
+                $value = $this->evaluator->evaluateString(
+                    $flagKey,
+                    $configuration,
+                    $context,
+                    $defaultValue
+                );
+            }
 
             $details = new ResolutionDetailsImpl();
-            $details->setValue($value);
+            $details->setValue((string) $value);
             $details->setReason('TARGETING_MATCH');
 
             return $details;
@@ -168,14 +188,24 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
     ): ResolutionDetails {
         try {
             $context = $context ?? new EvaluationContextImpl();
-            $configuration = $this->configurationManager->getConfiguration();
 
-            $value = $this->evaluator->evaluateNumber(
-                $flagKey,
-                $configuration,
-                $context,
-                $defaultValue
-            );
+            // Use source's evaluation if available, otherwise use local evaluator
+            if ($this->configurationManager->getSource()->supportsLocalEvaluation()) {
+                $value = $this->configurationManager->getSource()->evaluateFlag(
+                    $flagKey,
+                    $this->configurationManager->getConfig(),
+                    $context,
+                    $defaultValue
+                );
+            } else {
+                $configuration = $this->configurationManager->getConfiguration();
+                $value = $this->evaluator->evaluateNumber(
+                    $flagKey,
+                    $configuration,
+                    $context,
+                    $defaultValue
+                );
+            }
 
             $details = new ResolutionDetailsImpl();
             $details->setValue((int) $value);
@@ -203,14 +233,24 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
     ): ResolutionDetails {
         try {
             $context = $context ?? new EvaluationContextImpl();
-            $configuration = $this->configurationManager->getConfiguration();
 
-            $value = $this->evaluator->evaluateNumber(
-                $flagKey,
-                $configuration,
-                $context,
-                $defaultValue
-            );
+            // Use source's evaluation if available, otherwise use local evaluator
+            if ($this->configurationManager->getSource()->supportsLocalEvaluation()) {
+                $value = $this->configurationManager->getSource()->evaluateFlag(
+                    $flagKey,
+                    $this->configurationManager->getConfig(),
+                    $context,
+                    $defaultValue
+                );
+            } else {
+                $configuration = $this->configurationManager->getConfiguration();
+                $value = $this->evaluator->evaluateNumber(
+                    $flagKey,
+                    $configuration,
+                    $context,
+                    $defaultValue
+                );
+            }
 
             $details = new ResolutionDetailsImpl();
             $details->setValue((float) $value);
@@ -238,17 +278,28 @@ class AwsAppConfigProvider implements Provider, HooksGetter, MetadataGetter, Log
     ): ResolutionDetails {
         try {
             $context = $context ?? new EvaluationContextImpl();
-            $configuration = $this->configurationManager->getConfiguration();
 
-            // Ensure defaultValue is an array for object evaluation
-            $objectDefaultValue = is_array($defaultValue) ? $defaultValue : [];
+            // Use source's evaluation if available, otherwise use local evaluator
+            if ($this->configurationManager->getSource()->supportsLocalEvaluation()) {
+                $value = $this->configurationManager->getSource()->evaluateFlag(
+                    $flagKey,
+                    $this->configurationManager->getConfig(),
+                    $context,
+                    $defaultValue
+                );
+            } else {
+                $configuration = $this->configurationManager->getConfiguration();
 
-            $value = $this->evaluator->evaluateObject(
-                $flagKey,
-                $configuration,
-                $context,
-                $objectDefaultValue
-            );
+                // Ensure defaultValue is an array for object evaluation
+                $objectDefaultValue = is_array($defaultValue) ? $defaultValue : [];
+
+                $value = $this->evaluator->evaluateObject(
+                    $flagKey,
+                    $configuration,
+                    $context,
+                    $objectDefaultValue
+                );
+            }
 
             $details = new ResolutionDetailsImpl();
             $details->setValue($value);

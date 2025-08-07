@@ -19,6 +19,15 @@ class AwsSdkSource implements ConfigurationSourceInterface
     private AppConfigClient $appConfigClient;
     private ?string $configurationVersion = null;
     private ?int $lastModified = null;
+    private ?array $mockConfiguration = null;
+
+    /**
+     * Set mock configuration for testing
+     */
+    public function setMockConfiguration(?array $configuration): void
+    {
+        $this->mockConfiguration = $configuration;
+    }
 
     public function __construct(AppConfigClient $appConfigClient)
     {
@@ -27,6 +36,11 @@ class AwsSdkSource implements ConfigurationSourceInterface
 
     public function loadConfiguration(Configuration $config): array
     {
+        // Return mock configuration if set (for testing)
+        if ($this->mockConfiguration !== null) {
+            return $this->mockConfiguration;
+        }
+
         try {
             $result = $this->appConfigClient->getConfiguration([
                 'Application' => $config->getApplication(),
@@ -73,8 +87,8 @@ class AwsSdkSource implements ConfigurationSourceInterface
         // AWS SDK source doesn't support local evaluation
         // Load configuration and use local evaluation logic
         $configuration = $this->loadConfiguration($config);
-        $features = $configuration['features'] ?? [];
-        $flag = $features[$flagKey] ?? null;
+        $flags = $configuration['flags'] ?? [];
+        $flag = $flags[$flagKey] ?? null;
 
         if ($flag === null) {
             return $defaultValue;
@@ -86,7 +100,7 @@ class AwsSdkSource implements ConfigurationSourceInterface
 
     public function supportsLocalEvaluation(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -99,22 +113,33 @@ class AwsSdkSource implements ConfigurationSourceInterface
      */
     private function evaluateFlagValue(array $flag, EvaluationContext $context, mixed $defaultValue): mixed
     {
-        // Check if flag has rules
-        $rules = $flag['rules'] ?? [];
+        // Check if flag is enabled
+        if (($flag['state'] ?? 'DISABLED') !== 'ENABLED') {
+            return $defaultValue;
+        }
+
+        // Get default variants
+        $defaultVariants = $flag['defaultVariants'] ?? [];
+
+        // Check if flag has targeting rules
+        $targeting = $flag['targeting'] ?? null;
+        $rules = $targeting['rules'] ?? [];
 
         if (empty($rules)) {
-            return $flag['default'] ?? $defaultValue;
+            // Return first available default variant or defaultValue
+            return $this->getFirstVariant($defaultVariants) ?? $defaultValue;
         }
 
         // Evaluate rules in order
         foreach ($rules as $rule) {
             if ($this->evaluateRule($rule, $context)) {
-                return $rule['value'] ?? $defaultValue;
+                $variants = $rule['variants'] ?? [];
+                return $this->getFirstVariant($variants) ?? $defaultValue;
             }
         }
 
         // Return default value if no rules match
-        return $flag['default'] ?? $defaultValue;
+        return $this->getFirstVariant($defaultVariants) ?? $defaultValue;
     }
 
     /**
@@ -148,8 +173,8 @@ class AwsSdkSource implements ConfigurationSourceInterface
         // Simple condition evaluation - can be extended with a proper expression parser
         // For now, we'll implement basic equality checks
 
-        if (preg_match('/^(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
-            $path = $matches[1];
+        if (preg_match('/^([^=]+)\s*==\s*["\']([^"\']*)["\']$/', $condition, $matches)) {
+            $path = trim($matches[1]);
             $expectedValue = $matches[2];
 
             $actualValue = $this->getValueFromContext($path, $context);
@@ -159,6 +184,27 @@ class AwsSdkSource implements ConfigurationSourceInterface
 
         // Default to false for unrecognized conditions
         return false;
+    }
+
+    /**
+     * Get first available variant from variants array
+     *
+     * @param array $variants Variants array
+     * @return mixed First variant value or null
+     */
+    private function getFirstVariant(array $variants): mixed
+    {
+        if (empty($variants)) {
+            return null;
+        }
+
+        // Return first available variant value
+        foreach ($variants as $type => $value) {
+            return $value;
+        }
+
+        // This should never be reached, but PHPStan requires it
+        return null;
     }
 
     /**

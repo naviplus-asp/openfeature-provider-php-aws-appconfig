@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "flags": {
+    "simple-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "boolean": false
+      }
+    },
+    "string-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "string": "default-value"
+      }
+    },
+    "number-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "number": 42
+      }
+    },
+    "object-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "object": {
+          "key": "value"
+        }
+      }
+    },
+    "user-role-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "boolean": false
+      },
+      "targeting": {
+        "rules": [
+          {
+            "condition": "user.role == \"admin\"",
+            "variants": {
+              "boolean": true
+            }
+          },
+          {
+            "condition": "user.role == \"moderator\"",
+            "variants": {
+              "boolean": true
+            }
+          }
+        ]
+      }
+    },
+    "region-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "string": "global"
+      },
+      "targeting": {
+        "rules": [
+          {
+            "condition": "user.region == \"us\"",
+            "variants": {
+              "string": "us-specific"
+            }
+          },
+          {
+            "condition": "user.region == \"jp\"",
+            "variants": {
+              "string": "jp-specific"
+            }
+          }
+        ]
+      }
+    },
+    "complex-flag": {
+      "state": "ENABLED",
+      "defaultVariants": {
+        "string": "default"
+      },
+      "targeting": {
+        "rules": [
+          {
+            "condition": "user.profile.tier == \"premium\"",
+            "variants": {
+              "string": "premium-feature"
+            }
+          },
+          {
+            "condition": "request.headers.x-feature == \"beta\"",
+            "variants": {
+              "string": "beta-feature"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
