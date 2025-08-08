@@ -31,6 +31,7 @@ This project implements an OpenFeature provider for PHP that uses AWS AppConfig 
 - Include `@param`, `@return`, and `@throws` annotations
 - Document complex business logic with inline comments
 - Keep README.md updated with usage examples
+ - When updating `README.md`, update `README-ja.md` in the same pull request to keep both in sync
 
 ## OpenFeature Integration
 
