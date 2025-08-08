@@ -90,6 +90,164 @@ $config = new Configuration(
 );
 ```
 
+### Sidecar Pattern with Docker Compose
+
+For production deployments, you can use the AppConfig Agent as a sidecar container. This approach provides better isolation, scalability, and resource management.
+
+#### Basic Sidecar Configuration
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_CONFIG_AGENT_HOST=agent
+      - APP_CONFIG_AGENT_PORT=2772
+    depends_on:
+      agent:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  agent:
+    image: public.ecr.aws/aws-appconfig/aws-appconfig-agent:latest
+    environment:
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - AWS_APPCONFIG_APPLICATION=my-app
+      - AWS_APPCONFIG_ENVIRONMENT=production
+      - AWS_APPCONFIG_CONFIGURATION_PROFILE=feature-flags
+    volumes:
+      - ./configs:/opt/appconfig-agent/configs
+    ports:
+      - "2772:2772"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2772/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+#### Application Configuration for Sidecar
+
+```php
+use OpenFeature\Providers\AwsAppConfig\Configuration;
+use OpenFeature\Providers\AwsAppConfig\Configuration\ConfigurationSourceType;
+
+$config = new Configuration(
+    application: 'my-app',
+    environment: 'production',
+    configurationProfile: 'feature-flags',
+    region: 'us-east-1',
+    sourceType: ConfigurationSourceType::AGENT,
+    agentHost: $_ENV['APP_CONFIG_AGENT_HOST'] ?? 'localhost',
+    agentPort: (int)($_ENV['APP_CONFIG_AGENT_PORT'] ?? 2772),
+    enablePolling: true,
+    pollingInterval: 60
+);
+```
+
+#### Kubernetes Sidecar Configuration
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: app
+        image: my-app:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: APP_CONFIG_AGENT_HOST
+          value: "localhost"
+        - name: APP_CONFIG_AGENT_PORT
+          value: "2772"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+      - name: appconfig-agent
+        image: public.ecr.aws/aws-appconfig/aws-appconfig-agent:latest
+        ports:
+        - containerPort: 2772
+        env:
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_APPCONFIG_APPLICATION
+          value: "my-app"
+        - name: AWS_APPCONFIG_ENVIRONMENT
+          value: "production"
+        - name: AWS_APPCONFIG_CONFIGURATION_PROFILE
+          value: "feature-flags"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secret-access-key
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 2772
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 2772
+          initialDelaySeconds: 5
+          periodSeconds: 10
+```
+
+#### Benefits of Sidecar Pattern
+
+- **Isolation**: Agent runs in its own container with dedicated resources
+- **Scalability**: Each application instance has its own agent
+- **Reliability**: Agent failures don't affect the main application
+- **Monitoring**: Independent health checks and metrics
+- **Security**: Network isolation and resource limits
+- **Updates**: Independent deployment and versioning
+
 ### Advanced Configuration with Caching
 
 ```php
@@ -322,6 +480,27 @@ composer test:with-agent
 
 The integration tests will automatically detect if the Docker agent is available and use it for testing. If the agent is not available, the tests will fall back to using mock data.
 
+#### Development with Sidecar Agent
+
+For local development, you can use the provided Docker Compose configuration:
+
+```bash
+# Start the application with sidecar agent
+docker-compose -f docker-compose.agent.yml up -d
+
+# Run your application
+docker-compose up app
+
+# Stop all services
+docker-compose -f docker-compose.agent.yml down
+```
+
+The `docker-compose.agent.yml` file provides a complete development environment with:
+- AppConfig Agent running on port 2772
+- Health checks and automatic restarts
+- Local configuration for testing
+- Network isolation for security
+
 ### Code Quality
 
 ```bash
@@ -347,6 +526,51 @@ composer phpcbf
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Troubleshooting
+
+### Common Issues with Sidecar Agent
+
+#### Agent Connection Issues
+```bash
+# Check if agent is running
+curl http://localhost:2772/health
+
+# Check agent logs
+docker logs appconfig-agent-test
+
+# Verify network connectivity
+docker exec app ping agent
+```
+
+#### Configuration Sync Issues
+- Ensure the agent has proper IAM permissions for AppConfig
+- Check that the application, environment, and configuration profile exist
+- Verify AWS credentials are correctly configured
+- Check agent logs for detailed error messages
+
+#### Performance Issues
+- Monitor agent resource usage: `docker stats appconfig-agent-test`
+- Adjust polling intervals based on your requirements
+- Consider using caching to reduce API calls
+- Monitor network latency between app and agent
+
+### Debugging
+
+Enable debug logging for the provider:
+
+```php
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+
+$logger = new Logger('openfeature');
+$logger->pushHandler(new StreamHandler('php://stderr', Logger::DEBUG));
+
+$config = new Configuration(
+    // ... other config
+    logger: $logger
+);
+```
 
 ## Support
 
